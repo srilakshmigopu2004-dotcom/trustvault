@@ -1,12 +1,19 @@
 """Idempotent demo data. Usage: TV_AUDIT_KEY=... python -m trustvault.seed
-Demo password comes from TV_SEED_PASSWORD (default below). Change it on any shared deployment."""
+Role-specific demo passwords can be overridden with TV_*_SEED_PASSWORD variables."""
 import os
 import sys
 
 from . import audit, auth, create_app, db as dbm, files
 from .util import now
 
-PASSWORD = os.environ.get("TV_SEED_PASSWORD", "TrustVault-Demo-2026!")
+LEGACY_PASSWORD = os.environ.get("TV_SEED_PASSWORD")
+ROLE_PASSWORDS = {
+    "admin": os.environ.get("TV_ADMIN_SEED_PASSWORD") or (f"{LEGACY_PASSWORD}-admin" if LEGACY_PASSWORD else "TrustVault-Admin-Demo-2026!"),
+    "owner": os.environ.get("TV_OWNER_SEED_PASSWORD") or (f"{LEGACY_PASSWORD}-owner" if LEGACY_PASSWORD else "TrustVault-Owner-Demo-2026!"),
+    "viewer": os.environ.get("TV_USER_SEED_PASSWORD") or (f"{LEGACY_PASSWORD}-user" if LEGACY_PASSWORD else "TrustVault-User-Demo-2026!"),
+}
+if len(set(ROLE_PASSWORDS.values())) != len(ROLE_PASSWORDS):
+    raise RuntimeError("Demo role passwords must be distinct; set unique per-role seed passwords.")
 USERS = [
     ("admin@trustvault.test", "Ada Admin", "admin"),
     ("alice@trustvault.test", "Alice Owner", "owner"),
@@ -36,7 +43,7 @@ def main():
             ids = {}
             for email, name, role in USERS:
                 cur = conn.execute("INSERT INTO users(email,name,password_hash,role,created_at) VALUES(?,?,?,?,?)",
-                                   (email, name, auth.hash_password(PASSWORD), role, now()))
+                                   (email, name, auth.hash_password(ROLE_PASSWORDS[role]), role, now()))
                 ids[email] = cur.lastrowid
             for owner, name, cat, content, grants in DOCS:
                 mime = files.validate(name, content)
@@ -52,7 +59,7 @@ def main():
                     audit.append(conn, actor, "grant_added", doc_id=cur.lastrowid, doc_name=name,
                                  detail={"seed": True, "user_id": ids[grantee], "email": grantee, "level": level})
             conn.commit()
-            print("seeded; demo password:", PASSWORD)
+            print("seeded; demo accounts ready (see README for role-specific credentials)")
         finally:
             conn.close()
 

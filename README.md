@@ -12,7 +12,7 @@ export TV_AUDIT_KEY="$(python -c 'import secrets;print(secrets.token_urlsafe(32)
 export TV_INSECURE_COOKIES=1            # local http only; cookies are Secure by default
 python -m trustvault.seed               # creates data/ and demo users + documents (idempotent)
 flask --app run run                     # http://127.0.0.1:5000
-python -m unittest discover -s tests -t .   # 56 tests (plain unittest; pytest should also work)
+python -m unittest discover -s tests -t .   # 61 tests (plain unittest; pytest should also work)
 python scripts/mutation_check.py            # removes each security control in turn; every mutant must be killed
 ```
 
@@ -21,17 +21,24 @@ Production / clean-clone deploy (any host that runs Docker, with a persistent vo
 ```bash
 docker build -t trustvault .
 docker run -p 8000:8000 -v tvdata:/data \
-  -e TV_AUDIT_KEY=<32+ random chars> -e TV_SEED_PASSWORD=<demo password> trustvault
+  -e TV_AUDIT_KEY=<32+ random chars> \
+  -e TV_ADMIN_SEED_PASSWORD=<admin password> \
+  -e TV_OWNER_SEED_PASSWORD=<owner password> \
+  -e TV_USER_SEED_PASSWORD=<user password> trustvault
 ```
 Put it behind HTTPS (cookies are `Secure`). Set `TV_TRUST_PROXY=1` behind a reverse proxy. Keep `TV_AUDIT_KEY` out of the repo
 and out of the database volume. Schema: `trustvault/schema.sql` (applied automatically on first start).
 
-### Demo accounts (password = `TV_SEED_PASSWORD`, default `TrustVault-Demo-2026!`)
-| Role | Email |
-|---|---|
-| admin | admin@trustvault.test |
-| owner | alice@trustvault.test, bob@trustvault.test |
-| viewer | carol@trustvault.test, dave@trustvault.test |
+### Demo accounts
+These credentials are created only when seeding an empty database. Each role has a distinct password; set the matching environment variable above to override a default. Existing seeded accounts are not overwritten by rerunning the idempotent seed command.
+
+| Login role | App role | Demo email | Demo password |
+|---|---|---|---|
+| Admin | admin | `admin@trustvault.test` | `TrustVault-Admin-Demo-2026!` |
+| Owner | owner | `alice@trustvault.test` or `bob@trustvault.test` | `TrustVault-Owner-Demo-2026!` |
+| User | viewer | `carol@trustvault.test` or `dave@trustvault.test` | `TrustVault-User-Demo-2026!` |
+
+For compatibility, setting only `TV_SEED_PASSWORD` derives three distinct credentials by appending `-admin`, `-owner`, or `-user`. On shared deployments, set unique role-specific values and replace all demo credentials.
 
 Seed data: Alice owns two HR letters (one each shared with Carol and Dave) and a contract (Bob: edit, Carol: read). Bob owns a drawing nobody else can see.
 Log in as Carol and try `/api/documents/2/download` (Dave's letter): 404.

@@ -1,15 +1,258 @@
-:root { --bg:#fff; --fg:#1b1f24; --mut:#667; --line:#d7dbe0; --acc:#1d4ed8; --bad:#b42318; --card:#f7f8fa; }
-@media (prefers-color-scheme: dark) { :root { --bg:#14171c; --fg:#e8ebef; --mut:#9aa3ae; --line:#2b313a; --acc:#7aa2ff; --bad:#ff8a80; --card:#1c2027; } }
-* { box-sizing:border-box } body { margin:0; font:15px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--fg) }
-header { display:flex; gap:1rem; align-items:center; padding:.7rem 1rem; border-bottom:1px solid var(--line) }
-nav { display:flex; gap:.5rem; flex:1 } #who { color:var(--mut); font-size:13px }
-main { max-width:1100px; margin:1rem auto; padding:0 1rem }
-button, input, select { font:inherit; padding:.35rem .6rem; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg) }
-button { cursor:pointer } button.primary { background:var(--acc); color:#fff; border-color:var(--acc) } button.danger { color:var(--bad) }
-button.active { border-color:var(--acc) } form.row, .row { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin:.5rem 0 }
-table { width:100%; border-collapse:collapse; margin:.5rem 0; display:block; overflow-x:auto } th, td { text-align:left; padding:.4rem .5rem; border-bottom:1px solid var(--line); white-space:nowrap }
-th { color:var(--mut); font-weight:600; font-size:13px } .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:.8rem 1rem; margin:1rem 0 }
-.mut { color:var(--mut) } .bad { color:var(--bad) } h2 { margin:.5rem 0 } h3 { margin:.2rem 0 }
-#toast { position:fixed; bottom:1rem; left:50%; transform:translateX(-50%); background:var(--fg); color:var(--bg); padding:.5rem 1rem; border-radius:8px; opacity:0; transition:opacity .2s; pointer-events:none }
-#toast.show { opacity:1 }
-.grow { flex:1 }
+:root {
+	color-scheme: light;
+	/* DESIGN: A cool ledger paper keeps the ink-navy rail visually authoritative. */
+	--paper: #f3f5f8;
+	/* DESIGN: White surfaces separate records from the page without nested-card clutter. */
+	--surface: #ffffff;
+	/* DESIGN: Navy ink gives headings and primary data the tone of a formal ledger. */
+	--ink: #17253b;
+	/* DESIGN: Muted slate supports secondary metadata without sacrificing readability. */
+	--muted: #667286;
+	/* DESIGN: Cool rules distinguish ledger rows without heavy table grids. */
+	--line: #dbe1e9;
+	/* DESIGN: Brass is the signature action color requested for TrustVault. */
+	--brass: #b07a1f;
+	/* DESIGN: Pale brass highlights access states while retaining dark-text contrast. */
+	--brass-soft: #f5ecd9;
+	/* DESIGN: Navy anchors the sidebar and keeps the brand distinct from the brass accents. */
+	--navy: #17253b;
+	/* DESIGN: A lighter navy separates active navigation from the rail background. */
+	--navy-soft: #263854;
+	/* DESIGN: Red is reserved for denied or rejected security outcomes. */
+	--danger: #a43c36;
+	/* DESIGN: A restrained shadow lifts only focused surfaces above the ledger background. */
+	--shadow: 0 14px 36px rgba(28, 53, 42, .07);
+}
+
+/* DESIGN: Border-box sizing prevents controls from shifting at responsive breakpoints. */
+* { box-sizing: border-box }
+/* DESIGN: The page background stays neutral so navy, brass, and status colors remain legible. */
+body {
+	margin: 0;
+	min-height: 100vh;
+	color: var(--ink);
+	background-color: var(--paper);
+	background-image: linear-gradient(rgba(25, 75, 55, .025) 1px, transparent 1px), linear-gradient(90deg, rgba(25, 75, 55, .025) 1px, transparent 1px);
+	background-size: 32px 32px;
+	font: 15px/1.5 "Aptos", "Segoe UI", sans-serif;
+}
+
+/* DESIGN: The fixed left rail makes role navigation feel like a bank ledger index. */
+.sidebar {
+	position: fixed;
+	z-index: 5;
+	inset: 0 auto 0 0;
+	display: flex;
+	width: 260px;
+	min-height: 100vh;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 30px;
+	padding: 28px 18px 22px;
+	color: #f4f6f9;
+	background: var(--navy);
+	border-right: 1px solid rgba(255, 255, 255, .08);
+	box-shadow: 8px 0 30px rgba(23, 37, 59, .1);
+}
+/* DESIGN: The wordmark aligns the company name and emblem as one durable brand unit. */
+.brand { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 11px; color: inherit; text-decoration: none }
+.brand strong { font-family: Georgia, "Times New Roman", serif; font-size: 21px; font-weight: 600; letter-spacing: 0 }
+/* DESIGN: A shield-shaped brass seal replaces the generic monogram with a vault identity. */
+.brand-mark {
+	position: relative;
+	display: grid;
+	width: 36px;
+	height: 36px;
+	place-items: center;
+	border: 1px solid rgba(226, 190, 123, .65);
+	border-radius: 50%;
+	background: rgba(255, 255, 255, .035);
+}
+/* DESIGN: The shield silhouette makes the small sidebar brand mark recognizable at a glance. */
+.brand-mark::before { position: absolute; width: 21px; height: 25px; border: 1px solid #d8b876; background: linear-gradient(145deg, #e6d1a5, #b07a1f); clip-path: polygon(50% 0, 100% 18%, 92% 70%, 50% 100%, 8% 70%, 0 18%); content: "" }
+/* DESIGN: A dark keyhole completes the mark while keeping it decorative and text-free. */
+.brand-mark::after { position: absolute; top: 13px; left: 15px; width: 6px; height: 10px; border-radius: 4px 4px 2px 2px; background: var(--navy); box-shadow: 0 -4px 0 -1px var(--navy); content: "" }
+/* DESIGN: The small shield makes the sidebar emblem legible even without a separate image request. */
+.brand-mark::before { position: absolute; width: 21px; height: 25px; border: 1px solid #d8b876; background: linear-gradient(145deg, #e6d1a5, #b07a1f); clip-path: polygon(50% 0, 100% 18%, 92% 70%, 50% 100%, 8% 70%, 0 18%); content: "" }
+/* DESIGN: A dark keyhole completes the vault seal while keeping the mark purely decorative. */
+.brand-mark::after { position: absolute; top: 13px; left: 15px; width: 6px; height: 10px; border-radius: 4px 4px 2px 2px; background: var(--navy); box-shadow: 0 -4px 0 -1px var(--navy); content: "" }
+/* DESIGN: Navigation becomes a vertical index on desktop and keeps a clear active record. */
+nav { display: flex; flex: 1; flex-direction: column; align-items: stretch; gap: 7px }
+/* DESIGN: Account identity remains subordinate to the rail's navigation labels. */
+#who { flex: 0 0 auto; color: #d1d8e3; font-size: 13px }
+/* DESIGN: Main content clears the rail and keeps enough room for dense ledger records. */
+body:not(.login-state) { padding-left: 260px }
+body:not(.login-state) main { width: 100%; max-width: 1420px; margin: 0 auto; padding: 46px clamp(24px, 4vw, 58px) 72px }
+/* DESIGN: Serif headings signal the formal, archival character of a bank ledger. */
+h2, h3 { color: var(--ink) }
+h2 { margin: 0 0 22px; font-family: Georgia, "Times New Roman", serif; font-size: 30px; font-weight: 500; letter-spacing: 0 }
+h3 { margin: 20px 0 10px; font-size: 15px; font-weight: 700 }
+
+/* DESIGN: Shared control sizing keeps filters and actions aligned across all role views. */
+button, input, select {
+	min-height: 40px;
+	padding: 8px 12px;
+	border: 1px solid #d2ddd5;
+	border-radius: 6px;
+	background: var(--surface);
+	color: var(--ink);
+	font: inherit;
+}
+input::placeholder { color: #89968f }
+/* DESIGN: A visible focus ring supports keyboard navigation through dense tables and forms. */
+input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 3px solid rgba(176, 122, 31, .35); outline-offset: 2px }
+/* DESIGN: Brass action states visually connect primary actions to the TrustVault seal. */
+button { cursor: pointer; transition: background-color .16s ease, border-color .16s ease, transform .16s ease }
+button:hover { border-color: #c39a59; background-color: #fbf7ef }
+button:active { transform: translateY(1px) }
+button.primary { border-color: var(--brass); background: var(--brass); color: #fff; font-weight: 650 }
+button.primary:hover { border-color: #90600f; background: #90600f }
+button.danger { border-color: #ead6d4; color: var(--danger) }
+button.danger:hover { border-color: #d8aaa5; background: #fff7f6 }
+/* DESIGN: Navigation uses understated rail buttons so the active tab is easy to locate. */
+nav button { min-height: 42px; padding: 9px 13px; border-color: transparent; background: transparent; color: #d1d8e3; text-align: left }
+nav button:hover { border-color: rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .06); color: #fff }
+nav button.active { border-color: rgba(226, 190, 123, .3); background: rgba(176, 122, 31, .19); color: #f6dfb1 }
+/* DESIGN: Wrapping form rows allow ledger filters to adapt without clipping long labels. */
+form.row, .row { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 14px 0 }
+form.row input:not([type="file"]) { flex: 1 1 150px }
+form.row input[type="date"] { flex: 0 1 155px }
+form.row input[type="file"] { max-width: 100%; padding: 5px; color: var(--muted) }
+.grow { flex: 1 }
+
+/* DESIGN: Module introductions explain context without competing with the ledger heading. */
+.module-intro { max-width: 720px; margin: -10px 0 20px; color: var(--muted) }
+/* DESIGN: Module controls keep document selection and actions aligned as one working toolbar. */
+.module-controls { max-width: 760px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface) }
+.module-controls select { min-width: min(300px, 100%); flex: 1 1 240px }
+/* DESIGN: Result counts separate audit context from the denser event rows below. */
+.module-meta { margin: 20px 0 10px; color: var(--muted); font-size: 13px; font-weight: 650 }
+/* DESIGN: Empty states clarify when there is no history or no eligible document to review. */
+.empty-state { margin: 20px 0; padding: 18px; border: 1px dashed #cbd3de; border-radius: 7px; color: var(--muted); background: rgba(255, 255, 255, .58) }
+/* DESIGN: Recommendation notes keep the advisory-only guarantee beside the candidate list. */
+.module-note { margin: 20px 0 12px; padding: 12px 14px; border-left: 3px solid var(--brass); background: var(--brass-soft); color: #59451f }
+/* DESIGN: Candidate rows pair a reason with its explicit approval action for deliberate sharing. */
+.recommendation-list { display: grid; gap: 10px; max-width: 900px }
+.recommendation-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface) }
+.recommendation-row strong { color: var(--ink) }
+.recommendation-reason { margin: 6px 0 0; color: var(--muted); font-size: 13px }
+.recommendation-row button { flex: 0 0 auto }
+/* DESIGN: Profile forms group personal details and credential changes without nesting surfaces. */
+.profile-grid { display: grid; max-width: 1040px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 18px }
+.profile-card { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 22px }
+.profile-card h3 { margin: 0 0 4px; font-family: Georgia, "Times New Roman", serif; font-size: 20px; font-weight: 500 }
+/* DESIGN: Explicit labels keep account fields understandable without relying on placeholder text. */
+.profile-field { display: grid; gap: 6px; color: var(--ink); font-size: 13px; font-weight: 650 }
+.profile-field input { width: 100%; font-weight: 400 }
+.profile-hint { margin: 0 0 4px; font-size: 12px }
+.profile-card button { align-self: flex-start; min-width: 150px }
+
+/* DESIGN: Scrollable ledger tables preserve all columns while containing narrow-screen overflow. */
+table { display: block; width: 100%; margin: 14px 0 24px; overflow-x: auto; border: 1px solid var(--line); border-radius: 7px; border-spacing: 0; background: var(--surface) }
+th, td { padding: 12px 14px; border-bottom: 1px solid #e9eeea; text-align: left; white-space: nowrap }
+th { position: sticky; top: 0; color: #62736a; background: #f7f9f7; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase }
+tbody tr:last-child td { border-bottom: 0 }
+tbody tr:hover { background: #f7faf8 }
+td button { min-height: 34px; padding: 5px 9px; font-size: 13px }
+/* DESIGN: Action links use the brass accent without competing with the record text. */
+td a { color: #8e5d0d; font-weight: 650; text-decoration-thickness: 1px; text-underline-offset: 3px }
+/* DESIGN: Small status pills make access and audit state scannable in ledger rows. */
+.status { display: inline-flex; align-items: center; width: fit-content; min-height: 24px; padding: 3px 9px; border: 1px solid transparent; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.35; text-transform: capitalize; white-space: nowrap }
+/* DESIGN: Management access uses brass to identify the highest document permission. */
+.status-manage { border-color: #e3c98f; background: var(--brass-soft); color: #73500f }
+/* DESIGN: Edit access uses navy so it reads as an active but bounded permission. */
+.status-edit { border-color: #c5d0df; background: #edf1f6; color: #344760 }
+/* DESIGN: Read access stays quiet to distinguish viewing from editing or managing. */
+.status-read { border-color: #d9e1e8; background: #f2f5f8; color: #566476 }
+/* DESIGN: Successful audit events use a calm green state separate from permissions. */
+.status-ok { border-color: #c7dfd0; background: #eaf4ed; color: #28613e }
+/* DESIGN: Denied and rejected events share a clear warning treatment for review. */
+.status-denied, .status-rejected { border-color: #ecc9c5; background: #fbefed; color: #923d37 }
+/* DESIGN: Cards frame sharing and alert details without making every page section float. */
+.card { margin: 20px 0; padding: 20px 22px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow) }
+.card h3:first-child { margin-top: 0 }
+.mut { color: var(--muted) }
+.bad { color: var(--danger) }
+/* DESIGN: Toast feedback stays visible over the rail and uses a restrained brass edge. */
+#toast { position: fixed; z-index: 10; right: 24px; bottom: 24px; max-width: min(420px, calc(100vw - 32px)); padding: 12px 17px; transform: translateY(8px); border: 1px solid rgba(255, 255, 255, .12); border-radius: 7px; background: #18382e; color: #f5faf6; box-shadow: 0 8px 25px rgba(20, 49, 38, .2); opacity: 0; transition: opacity .2s ease, transform .2s ease; pointer-events: none }
+#toast.show { transform: translateY(0); opacity: 1 }
+
+body.login-state { display: flex; min-height: 100vh; flex-direction: column }
+.login-state .topbar { position: relative; flex: 0 0 auto }
+.login-state #nav, .login-state #who { display: none }
+.login-state main { display: grid; flex: 1; place-items: center; width: min(100%, 560px); margin: 0 auto; padding: 52px 28px }
+.login-state main > .card { width: 100%; margin: 0; padding: 38px; border-top: 3px solid #6b9c7c; box-shadow: 0 20px 60px rgba(28, 53, 42, .1) }
+.login-state h2 { margin-bottom: 24px; font-size: 34px }
+.login-state form.row { align-items: stretch; flex-direction: column; gap: 12px; margin: 0 }
+.login-state form.row input, .login-state form.row button { width: 100%; min-height: 48px }
+
+@media (max-width: 700px) {
+	.topbar { min-height: 64px; flex-wrap: wrap; gap: 8px 16px; padding: 12px 18px }
+	.brand { margin-right: auto }
+	nav { order: 3; width: 100%; flex-basis: 100%; overflow-x: auto }
+	nav .grow { display: none }
+	nav button { flex: 0 0 auto }
+	#who { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+	main { margin-top: 28px; padding: 0 16px }
+	h2 { margin-bottom: 18px; font-size: 26px }
+	.card { padding: 16px }
+	.login-state main { padding: 32px 18px }
+	.login-state main > .card { padding: 28px 22px }
+	form.row input, form.row select, form.row button { flex: 1 1 100% }
+	.recommendation-row { align-items: stretch; flex-direction: column }
+	.recommendation-row button { width: 100% }
+	.profile-grid { grid-template-columns: 1fr }
+	.profile-card button { width: 100% }
+	#toast { right: 16px; bottom: 16px }
+}
+
+/* DESIGN: Desktop sign-in uses a balanced split so the vault identity and credential form share focus. */
+.login-state .sidebar { position: absolute; inset: 0 0 auto; min-height: 76px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 0; padding: 16px clamp(22px, 5vw, 72px); border-right: 0; border-bottom: 1px solid rgba(255, 255, 255, .08) }
+.login-state #nav, .login-state #who { display: none }
+.login-state main { display: block; width: min(1120px, calc(100% - 48px)); max-width: none; margin: auto; padding: 126px 0 46px }
+.login-layout { display: grid; width: 100%; min-height: 540px; grid-template-columns: minmax(0, 1.05fr) minmax(360px, .82fr); overflow: hidden; border: 1px solid #d9dee6; border-radius: 12px; background: var(--surface); box-shadow: 0 24px 70px rgba(23, 37, 59, .12) }
+/* DESIGN: The dark panel gives the split sign-in a strong vault silhouette without external imagery. */
+.login-art { position: relative; display: grid; min-height: 540px; place-items: center; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, #31445f 0, #202f49 37%, #17253b 78%); }
+/* DESIGN: Low-contrast construction lines evoke a vault face while leaving the seal as the focal point. */
+.login-art::before { position: absolute; inset: 8%; border: 1px solid rgba(222, 190, 131, .17); border-radius: 50%; background: repeating-radial-gradient(circle at center, transparent 0 54px, rgba(222, 190, 131, .12) 55px 56px, transparent 57px 85px); content: ""; }
+/* DESIGN: Fine perimeter marks make the illustration read as a precision lock, not a generic gradient. */
+.login-art::after { position: absolute; inset: 15%; border: 1px solid rgba(236, 215, 175, .11); border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(236, 215, 175, .35) 0deg 1deg, transparent 1deg 15deg); mask: radial-gradient(circle, transparent 0 64%, #000 65% 66%, transparent 67%); content: ""; }
+/* DESIGN: The central seal echoes the sidebar logo at a scale large enough to brand sign-in. */
+.vault-dial { position: relative; z-index: 1; display: grid; width: min(58%, 280px); aspect-ratio: 1; place-items: center; border: 2px solid #c49a57; border-radius: 50%; background: radial-gradient(circle, #263852 0 40%, transparent 41%), repeating-conic-gradient(from 0deg, rgba(214, 180, 119, .7) 0deg 1deg, transparent 1deg 30deg); box-shadow: 0 0 0 12px rgba(176, 122, 31, .08), inset 0 0 0 12px #17253b, inset 0 0 0 14px rgba(214, 180, 119, .55), 0 18px 54px rgba(0, 0, 0, .25); }
+/* DESIGN: The shield-shaped seal gives the CSS illustration a recognizable TrustVault mark. */
+.vault-seal { position: absolute; top: 50%; left: 50%; z-index: 2; width: 88px; height: 104px; transform: translate(-50%, -50%); border: 2px solid #d8b876; border-radius: 42% 42% 48% 48% / 14% 14% 66% 66%; background: linear-gradient(145deg, #e6d1a5, #b07a1f); clip-path: polygon(50% 0, 100% 18%, 92% 70%, 50% 100%, 8% 70%, 0 18%); filter: drop-shadow(0 9px 14px rgba(0, 0, 0, .22)); }
+/* DESIGN: The central keyhole ties the sign-in artwork to document access and vault security. */
+.vault-seal::after { position: absolute; top: 36px; left: 36px; width: 14px; height: 24px; border-radius: 10px 10px 6px 6px; background: #263852; box-shadow: 0 -6px 0 2px #263852; content: ""; }
+/* DESIGN: The credential panel stays white so labels and focus indicators remain easy to read. */
+.login-card { display: flex; flex-direction: column; justify-content: center; margin: 0; padding: clamp(30px, 5vw, 58px); border: 0; border-radius: 0; box-shadow: none; }
+.login-card h2 { margin-bottom: 28px; font-size: 36px }
+.login-card form.row { align-items: stretch; flex-direction: column; gap: 14px; margin: 0 }
+.login-card form.row input, .login-card form.row button { width: 100%; min-height: 50px }
+
+/* DESIGN: The compact rail becomes a horizontal ledger header before screen width gets constrained. */
+@media (max-width: 800px) {
+	body:not(.login-state) { padding-left: 0 }
+	body:not(.login-state) .sidebar { position: sticky; inset: 0 0 auto; width: 100%; min-height: 68px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 18px; border-right: 0; border-bottom: 1px solid rgba(255, 255, 255, .08) }
+	body:not(.login-state) nav { order: 3; width: 100%; flex-basis: 100%; flex-direction: row; overflow-x: auto }
+	body:not(.login-state) nav .grow { display: none }
+	body:not(.login-state) nav button { flex: 0 0 auto; min-height: 38px }
+	body:not(.login-state) #who { max-width: 44%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+	body:not(.login-state) main { width: 100%; margin: 0; padding: 30px 18px 54px }
+	.login-state .sidebar { min-height: 68px; padding: 12px 18px }
+	.login-state main { width: min(100% - 28px, 560px); margin: 0 auto; padding: 92px 0 24px }
+	.login-layout { grid-template-columns: 1fr; min-height: 0 }
+	.login-art { min-height: 220px }
+	.vault-dial { width: 142px }
+	.vault-seal { width: 56px; height: 66px }
+	.vault-seal::after { top: 24px; left: 22px; width: 12px; height: 17px; box-shadow: 0 -5px 0 2px #263852 }
+	.login-card { padding: 28px 24px }
+	.login-card h2 { font-size: 30px }
+	form.row input, form.row select, form.row button { flex: 1 1 100% }
+	/* DESIGN: Fixed control bases stop mobile sign-in fields from stretching into the button. */
+	.login-card form.row input, .login-card form.row button { flex: 0 0 auto }
+}
+
+/* DESIGN: Reduced-motion preferences remove button movement while preserving clear state changes. */
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important }
+}

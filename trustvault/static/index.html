@@ -1,15 +1,35 @@
+<!-- DESIGN: Keeps the shell intentionally small because Flask serves one local, server-authorized app page. -->
 <!doctype html>
 <html lang="en">
 <head>
+  <!-- DESIGN: UTF-8 keeps ledger names and audit labels readable across imported records. -->
   <meta charset="utf-8">
+  <!-- DESIGN: The viewport rule lets the ledger rail collapse cleanly on phones. -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- DESIGN: The title mirrors the identity used by the rail and sign-in view. -->
   <title>TrustVault</title>
+  <!-- DESIGN: A same-origin stylesheet stays within the app's restrictive content policy. -->
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-  <header><strong>TrustVault</strong><nav id="nav"></nav><span id="who"></span></header>
+  <!-- DESIGN: The persistent shell gives authenticated pages a stable ledger-style rail. -->
+  <header class="sidebar">
+    <!-- DESIGN: The wordmark remains visible beside the CSS vault mark on every screen. -->
+    <a class="brand" href="/" aria-label="TrustVault home">
+      <!-- DESIGN: The decorative mark is hidden from assistive technology because the wordmark names it. -->
+      <span class="brand-mark" aria-hidden="true"></span>
+      <strong>TrustVault</strong>
+    </a>
+    <!-- DESIGN: JavaScript fills this region with the user's existing role-specific navigation. -->
+    <nav id="nav" aria-label="Main navigation"></nav>
+    <!-- DESIGN: Account identity stays separate from navigation for quick scanning. -->
+    <span id="who"></span>
+  </header>
+  <!-- DESIGN: The existing render target supports both the split sign-in and ledger views. -->
   <main id="main"></main>
+  <!-- DESIGN: The live region announces feedback without requiring users to notice color alone. -->
   <div id="toast" role="status"></div>
+  <!-- DESIGN: Local script loading avoids third-party code inside the security boundary. -->
   <script src="/static/app.js"></script>
 </body>
 </html>

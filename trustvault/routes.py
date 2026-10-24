@@ -13,6 +13,7 @@ from .util import ApiError, now
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$")
+PHONE_RE = re.compile(r"^\+?[0-9(). -]{7,32}$")
 LEVEL_NAME = {1: "read", 2: "edit", 3: "manage"}
 
 
@@ -105,7 +106,7 @@ def login():
     auth.record_attempt(g.db, email, ip, True)
     token, csrf = auth.create_session(g.db, row["id"])
     audit.log("login", actor=dict(row))
-    resp, _ = reply({"id": row["id"], "email": row["email"], "name": row["name"], "role": row["role"], "csrf": csrf})
+    resp, _ = reply({"id": row["id"], "email": row["email"], "name": row["name"], "phone": row["phone"], "role": row["role"], "csrf": csrf})
     resp.set_cookie(auth.COOKIE, token, httponly=True, samesite="Strict",
                     secure=current_app.config["COOKIE_SECURE"], max_age=current_app.config["SESSION_HOURS"] * 3600)
     return resp, 200
@@ -125,7 +126,75 @@ def logout():
 @requires("user")
 def me():
     u = g.user
-    return reply({"id": u["id"], "email": u["email"], "name": u["name"], "role": u["role"], "csrf": u["csrf"]})
+    return reply({"id": u["id"], "email": u["email"], "name": u["name"], "phone": u["phone"], "role": u["role"], "csrf": u["csrf"]})
+
+
+@bp.patch("/auth/profile")
+@requires("user")
+def update_profile():
+    body = json_body({"name", "email", "phone", "current_password"})
+    user = g.db.execute("SELECT * FROM users WHERE id=?", (g.user["id"],)).fetchone()
+    changes = {}
+    if "name" in body:
+        if not isinstance(body["name"], str):
+            raise ApiError(400, "name must be text")
+        name = body["name"].strip()
+        if not 1 <= len(name) <= 100:
+            raise ApiError(400, "name must be 1-100 characters")
+        if name != user["name"]:
+            changes["name"] = name
+    if "email" in body:
+        if not isinstance(body["email"], str):
+            raise ApiError(400, "email must be text")
+        email = body["email"].strip().lower()
+        if not EMAIL_RE.match(email):
+            raise ApiError(400, "invalid email")
+        if email != user["email"]:
+            current_password = body.get("current_password")
+            if not isinstance(current_password, str) or not auth.verify_password(user, current_password):
+                raise ApiError(403, "current password is required to change email", audit={
+                    "action": "profile_email_change", "outcome": "denied", "detail": {"reason": "invalid_current_password"}
+                })
+            if g.db.execute("SELECT 1 FROM users WHERE email=? AND id<>?", (email, user["id"])).fetchone():
+                raise ApiError(409, "email already in use")
+            changes["email"] = email
+    if "phone" in body:
+        if not isinstance(body["phone"], str):
+            raise ApiError(400, "phone must be text")
+        phone = body["phone"].strip()
+        digits = re.sub(r"\D", "", phone)
+        if phone and (not PHONE_RE.fullmatch(phone) or not 7 <= len(digits) <= 15):
+            raise ApiError(400, "phone must contain 7-15 digits")
+        normalized_phone = phone or None
+        if normalized_phone != user["phone"]:
+            changes["phone"] = normalized_phone
+    if not changes:
+        raise ApiError(400, "nothing to change")
+    assignments = ", ".join(f"{field}=?" for field in changes)
+    g.db.execute(f"UPDATE users SET {assignments} WHERE id=?", (*changes.values(), user["id"]))
+    audit.log("profile_updated", detail={"fields": sorted(changes)})
+    updated = g.db.execute("SELECT id,email,name,phone,role FROM users WHERE id=?", (user["id"],)).fetchone()
+    return reply(dict(updated))
+
+
+@bp.post("/auth/password")
+@requires("user")
+def change_password():
+    body = json_body({"current_password", "new_password"}, {"current_password", "new_password"})
+    if not isinstance(body["current_password"], str):
+        raise ApiError(400, "current_password must be text")
+    user = g.db.execute("SELECT * FROM users WHERE id=?", (g.user["id"],)).fetchone()
+    if not auth.verify_password(user, body["current_password"]):
+        raise ApiError(403, "current password is incorrect", audit={
+            "action": "password_change", "outcome": "denied", "detail": {"reason": "invalid_current_password"}
+        })
+    _check_password_strength(body["new_password"])
+    if auth.verify_password(user, body["new_password"]):
+        raise ApiError(400, "new password must be different")
+    g.db.execute("UPDATE users SET password_hash=? WHERE id=?", (auth.hash_password(body["new_password"]), user["id"]))
+    auth.end_all_sessions(g.db, user["id"])
+    audit.log("password_changed", detail={"sessions_revoked": True})
+    return reply({"ok": True, "reauthenticate": True})
 
 
 # ---------------------------------------------------------------- documents: create / search

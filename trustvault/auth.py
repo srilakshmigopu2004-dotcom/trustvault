@@ -68,7 +68,7 @@ def load_user(db, token: str | None):
     if not token:
         return None
     row = db.execute(
-        "SELECT u.id,u.email,u.name,u.role,u.active,s.csrf,s.token_hash FROM sessions s "
+        "SELECT u.id,u.email,u.name,u.phone,u.role,u.active,s.csrf,s.token_hash FROM sessions s "
         "JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND u.active=1",
         (_sha(token), now())).fetchone()
     return dict(row) if row else None

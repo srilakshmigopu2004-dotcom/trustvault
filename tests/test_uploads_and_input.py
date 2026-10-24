@@ -58,7 +58,13 @@ class UploadTest(WorldTest):
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.get_json()["name"], "passwd.txt")
         r = self.up("..\\..\\windows\\evil.txt", b"x")
-        self.assertEqual(r.get_json()["name"], "evil.txt")
+        self.assertEqual(r.status_code, 201)
+        name = r.get_json()["name"]
+        # Exact result depends on the Werkzeug version; what matters is that no path survives.
+        self.assertNotIn("/", name)
+        self.assertNotIn("\\", name)
+        self.assertFalse(name.startswith("."))
+        self.assertTrue(name.endswith("evil.txt"))
         import os
         for f in os.listdir(self.w.app.config["STORAGE_DIR"]):
             self.assertRegex(f, r"^[0-9a-f]{32}$")  # blob names are random keys, never user input

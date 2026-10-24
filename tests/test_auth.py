@@ -1,7 +1,71 @@
+import os
+import sqlite3
+
+from trustvault import db as dbm
+
 from .helpers import PASSWORD, WorldTest
 
 
 class AuthTest(WorldTest):
+    def test_demo_passwords_are_distinct_for_each_login_role(self):
+        from trustvault.seed import ROLE_PASSWORDS
+
+        self.assertEqual(set(ROLE_PASSWORDS), {"admin", "owner", "viewer"})
+        self.assertEqual(len(set(ROLE_PASSWORDS.values())), 3)
+
+    def test_profile_updates_name_phone_and_login_email(self):
+        alice = self.w.client("alice")
+        result = alice.patch("/api/auth/profile", json={
+            "name": "Alice Ledger", "email": "ALICE.NEW@x.test", "phone": "+1 (555) 123-4567",
+            "current_password": PASSWORD,
+        })
+        self.assertEqual(result.status_code, 200, result.get_json())
+        self.assertEqual(result.get_json(), {
+            "id": self.w.ids["alice"], "email": "alice.new@x.test", "name": "Alice Ledger",
+            "phone": "+1 (555) 123-4567", "role": "owner",
+        })
+        self.assertEqual(alice.get("/api/auth/me").get_json()["phone"], "+1 (555) 123-4567")
+        self.assertEqual(self.w.anon().login("alice@x.test", PASSWORD).status_code, 401)
+        self.assertEqual(self.w.anon().login("alice.new@x.test", PASSWORD).status_code, 200)
+        self.assertEqual(self.w.sql("SELECT action FROM audit_log WHERE action='profile_updated'")[0][0], "profile_updated")
+
+    def test_profile_validates_phone_email_and_email_change_password(self):
+        alice = self.w.client("alice")
+        wrong_password = alice.patch("/api/auth/profile", json={
+            "email": "alice.new@x.test", "current_password": "incorrect-password",
+        })
+        self.assertEqual(wrong_password.status_code, 403)
+        duplicate = alice.patch("/api/auth/profile", json={
+            "email": "bob@x.test", "current_password": PASSWORD,
+        })
+        self.assertEqual(duplicate.status_code, 409)
+        invalid_phone = alice.patch("/api/auth/profile", json={"phone": "call me"})
+        self.assertEqual(invalid_phone.status_code, 400)
+        self.assertEqual(alice.get("/api/auth/me").status_code, 200)
+
+    def test_self_service_password_change_revokes_sessions_and_allows_new_login(self):
+        alice = self.w.client("alice")
+        new_password = "brand-new-secure-password-9"
+        result = alice.post("/api/auth/password", json={
+            "current_password": PASSWORD, "new_password": new_password,
+        })
+        self.assertEqual(result.status_code, 200, result.get_json())
+        self.assertEqual(alice.get("/api/auth/me").status_code, 401)
+        self.assertEqual(self.w.anon().login("alice@x.test", PASSWORD).status_code, 401)
+        self.assertEqual(self.w.anon().login("alice@x.test", new_password).status_code, 200)
+        self.assertEqual(self.w.sql("SELECT COUNT(*) FROM audit_log WHERE action='password_changed'")[0][0], 1)
+
+    def test_phone_column_is_added_to_existing_database(self):
+        path = os.path.join(self.w.tmp, "legacy.db")
+        conn = sqlite3.connect(path)
+        conn.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT, name TEXT, password_hash TEXT, role TEXT, active INTEGER, created_at TEXT)")
+        conn.close()
+        dbm.init_db(path)
+        conn = sqlite3.connect(path)
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
+        conn.close()
+        self.assertIn("phone", columns)
+
     def test_login_does_not_reveal_which_part_was_wrong(self):
         a = self.w.anon().login("alice@x.test", "wrong-password-xx")
         b = self.w.anon().login("nobody@x.test", "wrong-password-xx")

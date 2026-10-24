@@ -23,5 +23,8 @@ def init_db(path: str) -> None:
         if not has:
             with open(SCHEMA, encoding="utf-8") as f:
                 conn.executescript(f.read())
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+        if "phone" not in columns:
+            conn.execute("ALTER TABLE users ADD COLUMN phone TEXT")
     finally:
         conn.close()

@@ -2,6 +2,7 @@ CREATE TABLE users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
   name          TEXT NOT NULL,
+  phone         TEXT,
   password_hash TEXT NOT NULL,
   role          TEXT NOT NULL CHECK (role IN ('admin','owner','viewer')),
   active        INTEGER NOT NULL DEFAULT 1,
