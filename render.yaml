@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: trustvault
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    disk:
+      name: trustvault-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: TV_DB_PATH
+        value: /data/trustvault.db
+      - key: TV_STORAGE_DIR
+        value: /data/blobs
+      - key: TV_TRUST_PROXY
+        value: "1"
+      - key: TV_AUDIT_KEY
+        generateValue: true
+      - key: TV_ADMIN_SEED_PASSWORD
+        sync: false
+      - key: TV_OWNER_SEED_PASSWORD
+        sync: false
+      - key: TV_USER_SEED_PASSWORD
+        sync: false

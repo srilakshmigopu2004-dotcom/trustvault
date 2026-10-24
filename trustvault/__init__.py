@@ -24,7 +24,11 @@ def create_app(config: dict | None = None) -> Flask:
     app.config.update(config or {})
     app.config["MAX_CONTENT_LENGTH"] = app.config["MAX_UPLOAD_BYTES"] + 256 * 1024  # multipart overhead
     if len(app.config["AUDIT_KEY"]) < 16:
-        raise RuntimeError("Set TV_AUDIT_KEY to a secret of at least 16 characters (it keys the audit hash chain).")
+        raise RuntimeError(
+            "TV_AUDIT_KEY is missing or shorter than 16 characters. Set a stable secret in the "
+            "Render service environment, or deploy this repository as a Blueprint so render.yaml "
+            "generates it. Do not rotate this key after audit records have been created."
+        )
     if os.environ.get("TV_TRUST_PROXY") == "1":
         from werkzeug.middleware.proxy_fix import ProxyFix
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)

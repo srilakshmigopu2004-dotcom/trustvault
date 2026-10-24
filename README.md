@@ -29,6 +29,22 @@ docker run -p 8000:8000 -v tvdata:/data \
 Put it behind HTTPS (cookies are `Secure`). Set `TV_TRUST_PROXY=1` behind a reverse proxy. Keep `TV_AUDIT_KEY` out of the repo
 and out of the database volume. Schema: `trustvault/schema.sql` (applied automatically on first start).
 
+### Deploy to Render
+
+This repository includes a Render Blueprint in `render.yaml`. In Render, create a new Blueprint instance from the repository and
+select that file. If Render connects to the parent repository rather than this project directory, set the service's Root Directory
+to `trustvault`. The Blueprint builds the Dockerfile, binds Gunicorn to Render's `PORT`, and mounts a persistent disk at `/data`
+for the SQLite database and uploaded files. The disk requires a paid Render service plan.
+
+If you created a Render Web Service directly instead of deploying the Blueprint, add `TV_AUDIT_KEY` to that service's environment
+as a stable secret of at least 16 characters, then redeploy. Alternatively, deploy the committed `render.yaml` as a Blueprint;
+it generates `TV_AUDIT_KEY` automatically. The current startup error means this variable was not supplied to the running service.
+
+Set the three role-specific seed passwords when prompted during Blueprint setup. They are used only when the database is first
+initialized, so keep them safe; changing them later does not change existing accounts. Render generates `TV_AUDIT_KEY` for the
+service. Do not replace it or lose it: changing it makes the existing audit hash chain unverifiable. The disk preserves data across
+deploys, but it is not a backup.
+
 ### Demo accounts
 These credentials are created only when seeding an empty database. Each role has a distinct password; set the matching environment variable above to override a default. Existing seeded accounts are not overwritten by rerunning the idempotent seed command.
 
