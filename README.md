@@ -1,4 +1,4 @@
-# TrustVault
+# TrustVault.
 
 Secure document sharing where the wrong person cannot read a file, and the record shows who did.
 Flask + SQLite, no external services. Server-side authorization on every request.
